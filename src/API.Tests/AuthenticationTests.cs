@@ -16,7 +16,7 @@ public class AuthenticationTests(AppFactory appFactory) : IClassFixture<AppFacto
   [Fact]
   public async Task NoAuthEndpoint_WhenCalled_ItShouldReturnOk()
   {
-    var response = await _client.GetAsync("/noauth");
+    var response = await _client.GetAsync("/no-auth");
 
     response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -93,5 +93,36 @@ public class AuthenticationTests(AppFactory appFactory) : IClassFixture<AppFacto
 
     var body = await response.Content.ReadAsStringAsync();
     body.Should().Be("""{"message":"Hello, admin!"}""");
+  }
+
+  [Fact]
+  public async Task ApiKeyAuthEndpoint_WhenCalledWithNoApiKeyHeader_ItShouldReturnUnauthorized()
+  {
+    var response = await _client.GetAsync("/api-key");
+
+    response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+  }
+
+  [Fact]
+  public async Task ApiKeyAuthEndpoint_WhenCalledWithWrongApiKeyHeader_ItShouldReturnUnauthorized()
+  {
+    _client.DefaultRequestHeaders.Add("x-api-key", "invalid");
+
+    var response = await _client.GetAsync("/api-key");
+
+    response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+  }
+
+  [Fact]
+  public async Task ApiKeyAuthEndpoint_WhenCalledWithValidApiKeyHeader_ItShouldReturnOk()
+  {
+    _client.DefaultRequestHeaders.Add("x-api-key", "api-key");
+
+    var response = await _client.GetAsync("/api-key");
+
+    response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+    var body = await response.Content.ReadAsStringAsync();
+    body.Should().Be("""{"message":"Hello, API User!"}""");
   }
 }
