@@ -1,5 +1,7 @@
 using System.Net.Http.Headers;
 
+using Microsoft.AspNetCore.Mvc;
+
 namespace API.Tests;
 
 public class AuthenticationTests(AppFactory appFactory) : IClassFixture<AppFactory>
@@ -124,5 +126,21 @@ public class AuthenticationTests(AppFactory appFactory) : IClassFixture<AppFacto
 
     var body = await response.Content.ReadAsStringAsync();
     body.Should().Be("""{"message":"Hello, API User!"}""");
+  }
+
+  [Fact]
+  public async Task GenerateTokenEndpoint_WhenCalledWithNoLogin_ItShouldReturnBadRequest()
+  {
+    var response = await _client.PostAsJsonAsync("/generate-token", new { });
+
+    response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+  }
+
+  [Fact]
+  public async Task BearerAuthEndpoint_WhenCalledWithNoAuthHeader_ItShouldReturnUnauthorized()
+  {
+    var response = await _client.GetAsync("/bearer");
+
+    response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
   }
 }
