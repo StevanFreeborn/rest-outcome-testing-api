@@ -1,5 +1,7 @@
 using System.Net.Http.Headers;
+using System.Text.Json.Nodes;
 
+using Microsoft.AspNetCore.Authentication.BearerToken;
 using Microsoft.AspNetCore.Mvc;
 
 namespace API.Tests;
@@ -137,10 +139,56 @@ public class AuthenticationTests(AppFactory appFactory) : IClassFixture<AppFacto
   }
 
   [Fact]
+  public async Task GenerateTokenEndpoint_WhenCalledWithInvalidLogin_ItShouldReturnUnauthorized()
+  {
+    var response = await _client.PostAsJsonAsync("/generate-token", new { username = "invalid", password = "invalid" });
+
+    response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+  }
+
+  [Fact]
+  public async Task GenerateTokenEndpoint_WhenCalledWithValidLogin_ItShouldReturnOk()
+  {
+    var response = await _client.PostAsJsonAsync("/generate-token", new { username = "admin", password = "admin" });
+
+    response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+    var body = await response.Content.ReadFromJsonAsync<JsonObject>();
+    body.Should().ContainKey("token");
+  }
+
+  [Fact]
   public async Task BearerAuthEndpoint_WhenCalledWithNoAuthHeader_ItShouldReturnUnauthorized()
   {
     var response = await _client.GetAsync("/bearer");
 
     response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+  }
+
+  [Fact]
+  public async Task BearerAuthEndpoint_WhenCalledWithWrongAuthorizationHeader_ItShouldReturnUnauthorized()
+  {
+    _client.DefaultRequestHeaders.Authorization = new("Bearer", "invalid");
+
+    var response = await _client.GetAsync("/bearer");
+
+    response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
+  }
+
+  [Fact]
+  public async Task BearerAuthEndpoint_WhenCalledWithValidToken_ItShouldReturnOk()
+  {
+    var tokenResponse = await _client.PostAsJsonAsync("/generate-token", new { username = "admin", password = "admin" });
+    var tokenBody = await tokenResponse.Content.ReadFromJsonAsync<JsonObject>();
+    var token = tokenBody!["token"]!.ToString();
+
+    _client.DefaultRequestHeaders.Authorization = new("Bearer", token);
+
+    var response = await _client.GetAsync("/bearer");
+
+    response.StatusCode.Should().Be(HttpStatusCode.OK);
+
+    var body = await response.Content.ReadAsStringAsync();
+    body.Should().Be("""{"message":"Hello, admin!"}""");
   }
 }

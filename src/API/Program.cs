@@ -1,11 +1,32 @@
 
+using System.IdentityModel.Tokens.Jwt;
+
+using Microsoft.AspNetCore.Authentication.JwtBearer;
+using Microsoft.IdentityModel.Tokens;
+
 var builder = WebApplication.CreateBuilder(args);
 
 builder.Services.AddProblemDetails();
 
+const string jwtSecret = "This is a secret key for JWT token generation.";
+
 builder.Services.AddAuthentication()
   .AddScheme<AuthenticationSchemeOptions, BasicAuthentication>(BasicAuthentication.SchemeName, null)
-  .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthentication>(ApiKeyAuthentication.SchemeName, null);
+  .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthentication>(ApiKeyAuthentication.SchemeName, null)
+  .AddJwtBearer(options =>
+  {
+    options.TokenValidationParameters = new TokenValidationParameters
+    {
+      ValidateIssuerSigningKey = true,
+      IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtSecret)),
+      ValidateIssuer = true,
+      ValidateAudience = true,
+      ValidateLifetime = true,
+      ValidIssuer = "TestingAPI",
+      ValidAudience = "Onspring",
+      ClockSkew = TimeSpan.Zero,
+    };
+  });
 
 builder.Services
   .AddAuthorizationBuilder()
@@ -18,6 +39,12 @@ builder.Services
   .AddPolicy(ApiKeyAuthentication.SchemeName, policy =>
   {
     policy.AuthenticationSchemes.Add(ApiKeyAuthentication.SchemeName);
+    policy.RequireAuthenticatedUser();
+    policy.RequireClaim(ClaimTypes.NameIdentifier);
+  })
+  .AddPolicy(JwtBearerDefaults.AuthenticationScheme, policy =>
+  {
+    policy.AuthenticationSchemes.Add(JwtBearerDefaults.AuthenticationScheme);
     policy.RequireAuthenticatedUser();
     policy.RequireClaim(ClaimTypes.NameIdentifier);
   });
@@ -54,7 +81,8 @@ app
   {
     var user = context.User.Identity?.Name;
     return new SuccessResponse($"Hello, {user}!");
-  });
+  })
+  .RequireAuthorization(JwtBearerDefaults.AuthenticationScheme);
 
 app
   .MapPost("/generate-token", ([FromBody] LoginRequest loginRequest, HttpContext context) => 
@@ -67,13 +95,41 @@ app
       });
     }
 
+    if (loginRequest.Username != "admin" || loginRequest.Password != "admin")
+    {
+      return Results.Problem(
+        detail: "Invalid username or password.", 
+        statusCode: StatusCodes.Status401Unauthorized
+      );
+    }
+
+    var token = GenerateJwtToken(loginRequest.Username);
     var user = context.User.Identity?.Name;
-    return Results.Ok();
+    return Results.Ok(new { token });
   });
 
 app.UseHttpsRedirection();
 
 app.Run();
+
+static string GenerateJwtToken(string username)
+{
+  var tokenHandler = new JwtSecurityTokenHandler();
+  var key = Encoding.ASCII.GetBytes(jwtSecret);
+  var tokenDescriptor = new SecurityTokenDescriptor
+  {
+    Subject = new ClaimsIdentity([
+      new Claim(ClaimTypes.NameIdentifier, username),
+      new Claim(ClaimTypes.Name, username),
+    ]),
+    Expires = DateTime.UtcNow.AddDays(1),
+    SigningCredentials = new SigningCredentials(new SymmetricSecurityKey(key), SecurityAlgorithms.HmacSha256Signature),
+    Audience = "Onspring",
+    Issuer = "TestingAPI",
+  };
+  var token = tokenHandler.CreateToken(tokenDescriptor);
+  return tokenHandler.WriteToken(token);
+}
 
 /// <summary>
 /// Partial class declaration for the Program class.
