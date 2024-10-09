@@ -17,13 +17,18 @@ public class ClientCredentialsAuthentication(
 
     var contentType = Request.ContentType;
 
-    if (contentType is "application/x-www-form-urlencoded")
+    if (contentType is null)
+    {
+      return AuthenticateResult.Fail("Invalid client credentials");
+    }
+
+    if (contentType.Contains("application/x-www-form-urlencoded", StringComparison.InvariantCultureIgnoreCase))
     {
       var form = await Request.ReadFormAsync();
       clientId = form.TryGetValue("client_id", out var id) ? id : string.Empty;
       clientSecret = form.TryGetValue("client_secret", out var secret) ? secret : string.Empty;
     }
-    else if (contentType is "application/json")
+    else if (contentType.Contains("application/json", StringComparison.InvariantCultureIgnoreCase))
     {
       var body = await Request.ReadFromJsonAsync<Dictionary<string, string>>();
 

@@ -193,11 +193,11 @@ public class AuthenticationTests(AppFactory appFactory) : IClassFixture<AppFacto
   }
 
   [Fact]
-  public async Task AccessTokenEndpoint_WhenCalledWithNoClient_ItShouldReturnBadRequest()
+  public async Task AccessTokenEndpoint_WhenCalledWithNoClient_ItShouldReturnUnauthorized()
   {
     var response = await _client.PostAsJsonAsync("/access-token", new { });
 
-    response.StatusCode.Should().Be(HttpStatusCode.BadRequest);
+    response.StatusCode.Should().Be(HttpStatusCode.Unauthorized);
   }
 
   [Fact]

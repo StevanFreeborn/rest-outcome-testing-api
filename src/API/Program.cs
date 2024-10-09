@@ -16,6 +16,7 @@ const string jwtAudience = "Onspring";
 builder.Services.AddAuthentication()
   .AddScheme<AuthenticationSchemeOptions, BasicAuthentication>(BasicAuthentication.SchemeName, null)
   .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthentication>(ApiKeyAuthentication.SchemeName, null)
+  .AddScheme<AuthenticationSchemeOptions, ClientCredentialsAuthentication>(ClientCredentialsAuthentication.SchemeName, null)
   .AddJwtBearer(options => 
     options.TokenValidationParameters = new TokenValidationParameters
     {
@@ -46,6 +47,12 @@ builder.Services
   .AddPolicy(JwtBearerDefaults.AuthenticationScheme, policy =>
   {
     policy.AuthenticationSchemes.Add(JwtBearerDefaults.AuthenticationScheme);
+    policy.RequireAuthenticatedUser();
+    policy.RequireClaim(ClaimTypes.NameIdentifier);
+  })
+  .AddPolicy(ClientCredentialsAuthentication.SchemeName, policy =>
+  {
+    policy.AuthenticationSchemes.Add(ClientCredentialsAuthentication.SchemeName);
     policy.RequireAuthenticatedUser();
     policy.RequireClaim(ClaimTypes.NameIdentifier);
   });
@@ -110,33 +117,17 @@ app
   });
 
 app
-  .MapPost("/access-token", (ClientRequest clientRequest, HttpContext context) => 
+  .MapPost("/access-token", (HttpContext context) => 
   {
-    if (clientRequest.IsValid is false)
-    {
-      return Results.ValidationProblem(new Dictionary<string, string[]>()
-      {
-        { "client", ["Invalid client request. Client ID and secret are required."] }
-      });
-    }
-
-    if (clientRequest.ClientId is not "client" || clientRequest.ClientSecret is not "secret")
-    {
-      return Results.Problem(
-        detail: "Invalid client credentials.", 
-        statusCode: StatusCodes.Status401Unauthorized
-      );
-    }
-
-
-    var token = GenerateJwtToken(clientRequest.ClientId);
+    var token = GenerateJwtToken(context.User.Identity!.Name!);
+    
     return Results.Ok(new { 
       token_type = "Bearer", 
       access_token = token.Value,
       expires_in = token.ExpiresInSecs
     });
   })
-  .DisableAntiforgery();
+  .RequireAuthorization(ClientCredentialsAuthentication.SchemeName);
 
 app.UseHttpsRedirection();
 
@@ -176,16 +167,4 @@ record SuccessResponse(string Message);
 record LoginRequest(string Username, string Password)
 {
   public bool IsValid => string.IsNullOrWhiteSpace(Username) is false && string.IsNullOrWhiteSpace(Password) is false;
-}
-
-record ClientRequest : Bind
-{
-  public string ClientId { get; init; } = string.Empty;
-  public string ClientSecret { get; init; } = string.Empty;
-  public bool IsValid => string.IsNullOrWhiteSpace(ClientId) is false && string.IsNullOrWhiteSpace(ClientSecret) is false;
-
-  public static ValueTask<ClientRequest> BindAsync(HttpContext context, ParameterInfo parameter)
-  {
-    throw new NotImplementedException();
-  };
 }
