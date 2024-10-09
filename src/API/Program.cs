@@ -168,3 +168,15 @@ record LoginRequest(string Username, string Password)
 {
   public bool IsValid => string.IsNullOrWhiteSpace(Username) is false && string.IsNullOrWhiteSpace(Password) is false;
 }
+
+record ClientRequest : Bind
+{
+  public string ClientId { get; init; } = string.Empty;
+  public string ClientSecret { get; init; } = string.Empty;
+  public bool IsValid => string.IsNullOrWhiteSpace(ClientId) is false && string.IsNullOrWhiteSpace(ClientSecret) is false;
+
+  public static ValueTask<ClientRequest> BindAsync(HttpContext context, ParameterInfo parameter)
+  {
+    throw new NotImplementedException();
+  };
+}
