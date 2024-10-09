@@ -187,5 +187,5 @@ record ClientRequest : Bind
   public static ValueTask<ClientRequest> BindAsync(HttpContext context, ParameterInfo parameter)
   {
     throw new NotImplementedException();
-  };
+  }
 }
