@@ -1,15 +1,10 @@
 using System.Net.Http.Headers;
 using System.Text.Json.Nodes;
 
-using Microsoft.AspNetCore.Authentication.BearerToken;
-using Microsoft.AspNetCore.Mvc;
-
 namespace API.Tests;
 
-public class AuthenticationTests(AppFactory appFactory) : IClassFixture<AppFactory>
+public class AuthenticationTests(AppFactory appFactory) : IntegrationTest(appFactory)
 {
-  private readonly HttpClient _client = appFactory.CreateClient();
-
   private AuthenticationHeaderValue CreateBasicAuthHeader(string username, string password)
   {
     var credentials = $"{username}:{password}";

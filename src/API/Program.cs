@@ -1,6 +1,5 @@
 
 using System.IdentityModel.Tokens.Jwt;
-using System.Reflection;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.IdentityModel.Tokens;
@@ -119,15 +118,23 @@ app
 app
   .MapPost("/access-token", (HttpContext context) => 
   {
-    var token = GenerateJwtToken(context.User.Identity!.Name!);
+    var (expiresInSecs, value) = GenerateJwtToken(context.User.Identity!.Name!);
     
     return Results.Ok(new { 
       token_type = "Bearer", 
-      access_token = token.Value,
-      expires_in = token.ExpiresInSecs
+      access_token = value,
+      expires_in = expiresInSecs
     });
   })
   .RequireAuthorization(ClientCredentialsAuthentication.SchemeName);
+
+app.MapPost("/json-file", () => {});
+
+app.MapPost("/json-files", () => {});
+
+app.MapPost("/date-body", ([FromBody] DateRequest request) => new { value = request.DateValue });
+
+app.MapGet("/date", ([FromQuery] string date) => new { value = date });
 
 app.UseHttpsRedirection();
 
@@ -168,3 +175,5 @@ record LoginRequest(string Username, string Password)
 {
   public bool IsValid => string.IsNullOrWhiteSpace(Username) is false && string.IsNullOrWhiteSpace(Password) is false;
 }
+
+record DateRequest(string DateValue);
