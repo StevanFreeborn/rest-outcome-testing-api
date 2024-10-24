@@ -1,0 +1,11 @@
+let Source = Json.Document(Web.Contents("https://api.onspring.com",
+    [
+        RelativePath="Reports/id/{INSERT REPORT ID HERE}",
+        Headers=[#"X-ApiKey"="{INSERT API KEY HERE}"],
+        Query=[#"apiDataFormat"="Formatted"]
+    ])),
+    columnData = Source[columns],
+    rowData = Table.FromRecords(Source[rows]),
+    reportData = Table.FromRows(rowData[cells], columnData)
+
+ in reportData

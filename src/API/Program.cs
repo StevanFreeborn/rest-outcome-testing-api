@@ -1,4 +1,5 @@
 
+using System.Globalization;
 using System.IdentityModel.Tokens.Jwt;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
@@ -92,6 +93,14 @@ app
   .RequireAuthorization(JwtBearerDefaults.AuthenticationScheme);
 
 app
+  .MapGet("/oauth2", (HttpContext context) => 
+  {
+    var user = context.User.Identity?.Name;
+    return new SuccessResponse($"Hello, {user}!");
+  })
+  .RequireAuthorization(JwtBearerDefaults.AuthenticationScheme);
+
+app
   .MapPost("/generate-token", ([FromBody] LoginRequest loginRequest, HttpContext context) => 
   {
     if (loginRequest.IsValid is false)
@@ -110,9 +119,8 @@ app
       );
     }
 
-    var token = GenerateJwtToken(loginRequest.Username);
-    var user = context.User.Identity?.Name;
-    return Results.Ok(new { token = token.Value });
+    var (_, value) = GenerateJwtToken(loginRequest.Username);
+    return Results.Ok(new { token = value });
   });
 
 app
@@ -128,17 +136,85 @@ app
   })
   .RequireAuthorization(ClientCredentialsAuthentication.SchemeName);
 
-app.MapPost("/json-file", () => {});
+app.MapPost("/json-files", async ([FromBody] FilesRequest request) => 
+{
+  await SaveFiles(request.Attachments);
+  await SaveFiles(request.Images);
 
-app.MapPost("/json-files", () => {});
+  return new SuccessResponse("Files received!");
+});
 
 app.MapPost("/date-body", ([FromBody] DateRequest request) => new { value = request.DateValue });
 
 app.MapGet("/date", ([FromQuery] string date) => new { value = date });
 
-app.UseHttpsRedirection();
+app.MapPost("/list-value", ([FromBody] ListRequest request) => new { value = request.Value });
+
+app.MapGet("/list/{value}", ([FromRoute] string value) => new { value });
+
+app.MapGet("/simple-array", () => new[] { "one", "two", "three" } );
+
+app.MapGet("/complex-object", () => new { value = new { name = "John", age = 30, hobbies = new[] { "reading", "swimming" } } });
+
+app.MapGet("/complex-array", () => new[] { new { name = "John", age = 30 }, new { name = "Jane", age = 25 } });
+
+app.MapGet("/users", () => new { value = "1" });
+
+// Type A, 5bba9955-424e-49f9-ac36-d51b0417e71f
+// Type B, 8ecbcf0b-3fa3-4cde-80f2-c2986d9aad4c
+app.MapGet("/categories", () => new { value = "5bba9955-424e-49f9-ac36-d51b0417e71f" });
+
+var record = new { 
+  textField = "Text field value", 
+  numberField = 123, 
+  dateField = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
+  timespanField = "1 Second(s)"
+};
+
+app.MapGet("/data", () => record);
+
+app.MapGet("/timeout", async () => 
+{
+  await Task.Delay(11000);
+  return new SuccessResponse("Timeout completed!");
+});
+
+var retryCount = 0;
+
+app.MapGet("/retry", () => 
+{
+  if (retryCount < 4)
+  {
+    retryCount++;
+    return Results.Problem("Retry failed!", statusCode: StatusCodes.Status404NotFound);
+  }
+
+  return Results.Ok(new SuccessResponse("Finally!"));
+});
 
 app.Run();
+
+static async Task SaveFiles(string filesString)
+{
+  var files = filesString.Split(',');
+  
+  foreach (var file in files)
+  {
+    var fileBytes = Convert.FromBase64String(file);
+    var fileName = Path.GetRandomFileName();
+    var fileDirectory = Path.Combine(Directory.GetCurrentDirectory(), "files");
+    var filePath = Path.Combine(fileDirectory, fileName);
+
+    if (Directory.Exists(fileDirectory) is false)
+    {
+      Directory.CreateDirectory(fileDirectory);
+    }
+
+    await File.WriteAllBytesAsync(filePath, fileBytes);
+
+    Console.WriteLine($"File saved: {fileName}");
+  }
+}
 
 static (int ExpiresInSecs, string Value) GenerateJwtToken(string username)
 {
@@ -177,3 +253,7 @@ record LoginRequest(string Username, string Password)
 }
 
 record DateRequest(string DateValue);
+
+record ListRequest(string Value);
+
+record FilesRequest(string Attachments, string Images);
