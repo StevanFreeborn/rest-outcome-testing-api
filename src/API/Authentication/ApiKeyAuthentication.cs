@@ -6,8 +6,8 @@ class ApiKeyAuthentication(
   UrlEncoder encoder
 ) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
-  public const string SchemeName = "ApiKeyAuthentication";
-  private const string ApiKeyHeaderName = "x-api-key";
+  public const string SchemeName = "API Key";
+  public const string ApiKeyHeaderName = "x-api-key";
 
   protected override Task<AuthenticateResult> HandleAuthenticateAsync()
   {

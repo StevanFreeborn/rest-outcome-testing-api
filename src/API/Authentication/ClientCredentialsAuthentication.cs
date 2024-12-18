@@ -8,7 +8,7 @@ public class ClientCredentialsAuthentication(
   UrlEncoder encoder
 ) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
-  public const string SchemeName = "ClientCredentialsAuthentication";
+  public const string SchemeName = "Client Credentials";
 
   protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
   {

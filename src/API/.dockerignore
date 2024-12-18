@@ -1,0 +1,31 @@
+# Ignore build output
+bin/
+obj/
+app/publish/
+
+# Ignore user-specific files
+*.user
+*.swp
+*.suo
+*.tmp
+*.log
+
+# Ignore IDE-specific files
+.vscode/
+.idea/
+*.code-workspace
+
+# Ignore configuration and environment files
+*.env
+.env.*
+docker-compose.override.yml
+appsettings*.json
+
+# Ignore other unnecessary files
+.DS_Store
+Thumbs.db
+*.bak
+*.orig
+
+# Ignore node_modules if using front-end code
+node_modules/

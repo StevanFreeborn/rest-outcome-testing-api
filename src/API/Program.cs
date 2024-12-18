@@ -1,61 +1,23 @@
 
-using System.Globalization;
-using System.IdentityModel.Tokens.Jwt;
+using API.Common;
+using API.FakeData;
+using API.OpenAPI;
+using API.Retry;
 
 using Microsoft.AspNetCore.Authentication.JwtBearer;
-using Microsoft.IdentityModel.Tokens;
+
+using Scalar.AspNetCore;
 
 var builder = WebApplication.CreateBuilder(args);
 
+builder.Services.AddOpenApi(o => o.AddDocumentTransformer<AuthTransformer>());
+
+builder.Services.AddSingleton<RetryTracker>();
+
 builder.Services.AddProblemDetails();
 
-const string jwtSecret = "This is a secret key for JWT token generation.";
-const string jwtIssuer = "TestingAPI";
-const string jwtAudience = "Onspring";
-
-builder.Services.AddAuthentication()
-  .AddScheme<AuthenticationSchemeOptions, BasicAuthentication>(BasicAuthentication.SchemeName, null)
-  .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthentication>(ApiKeyAuthentication.SchemeName, null)
-  .AddScheme<AuthenticationSchemeOptions, ClientCredentialsAuthentication>(ClientCredentialsAuthentication.SchemeName, null)
-  .AddJwtBearer(options => 
-    options.TokenValidationParameters = new TokenValidationParameters
-    {
-      ValidateIssuerSigningKey = true,
-      IssuerSigningKey = new SymmetricSecurityKey(Encoding.ASCII.GetBytes(jwtSecret)),
-      ValidateIssuer = true,
-      ValidateAudience = true,
-      ValidateLifetime = true,
-      ValidIssuer = jwtIssuer,
-      ValidAudience = jwtAudience,
-      ClockSkew = TimeSpan.Zero,
-    });
-
-builder.Services
-  .AddAuthorizationBuilder()
-  .AddPolicy(BasicAuthentication.SchemeName, policy =>
-  {
-    policy.AuthenticationSchemes.Add(BasicAuthentication.SchemeName);
-    policy.RequireAuthenticatedUser();
-    policy.RequireClaim(ClaimTypes.NameIdentifier);
-  })
-  .AddPolicy(ApiKeyAuthentication.SchemeName, policy =>
-  {
-    policy.AuthenticationSchemes.Add(ApiKeyAuthentication.SchemeName);
-    policy.RequireAuthenticatedUser();
-    policy.RequireClaim(ClaimTypes.NameIdentifier);
-  })
-  .AddPolicy(JwtBearerDefaults.AuthenticationScheme, policy =>
-  {
-    policy.AuthenticationSchemes.Add(JwtBearerDefaults.AuthenticationScheme);
-    policy.RequireAuthenticatedUser();
-    policy.RequireClaim(ClaimTypes.NameIdentifier);
-  })
-  .AddPolicy(ClientCredentialsAuthentication.SchemeName, policy =>
-  {
-    policy.AuthenticationSchemes.Add(ClientCredentialsAuthentication.SchemeName);
-    policy.RequireAuthenticatedUser();
-    policy.RequireClaim(ClaimTypes.NameIdentifier);
-  });
+builder.Services.AddAuthN();
+builder.Services.AddAuthZ();
 
 var app = builder.Build();
 
@@ -65,6 +27,9 @@ app.UseStatusCodePages();
 
 app.UseAuthentication();
 app.UseAuthorization();
+
+app.MapOpenApi();
+app.MapScalarApiReference();
 
 app.MapGet("/no-auth", () => new SuccessResponse("You are in!"));
 
@@ -93,17 +58,9 @@ app
   .RequireAuthorization(JwtBearerDefaults.AuthenticationScheme);
 
 app
-  .MapGet("/oauth2", (HttpContext context) => 
+  .MapPost("/generate-token", ([FromBody] LoginRequest loginRequest, HttpContext context, [FromServices] JwtAuthenticator jwtAuth) => 
   {
-    var user = context.User.Identity?.Name;
-    return new SuccessResponse($"Hello, {user}!");
-  })
-  .RequireAuthorization(JwtBearerDefaults.AuthenticationScheme);
-
-app
-  .MapPost("/generate-token", ([FromBody] LoginRequest loginRequest, HttpContext context) => 
-  {
-    if (loginRequest.IsValid is false)
+    if (loginRequest.IsValid() is false)
     {
       return Results.ValidationProblem(new Dictionary<string, string[]>()
       {
@@ -111,7 +68,7 @@ app
       });
     }
 
-    if (loginRequest.Username != "admin" || loginRequest.Password != "admin")
+    if (loginRequest.Username != "admin" || loginRequest.Password != "password")
     {
       return Results.Problem(
         detail: "Invalid username or password.", 
@@ -119,14 +76,14 @@ app
       );
     }
 
-    var (_, value) = GenerateJwtToken(loginRequest.Username);
+    var (_, value) = jwtAuth.GenerateJwtToken(loginRequest.Username);
     return Results.Ok(new { token = value });
   });
 
 app
-  .MapPost("/access-token", (HttpContext context) => 
+  .MapPost("/access-token", (HttpContext context, [FromServices] JwtAuthenticator jwtAuth) => 
   {
-    var (expiresInSecs, value) = GenerateJwtToken(context.User.Identity!.Name!);
+    var (expiresInSecs, value) = jwtAuth.GenerateJwtToken(context.User.Identity!.Name!);
     
     return Results.Ok(new { 
       token_type = "Bearer", 
@@ -136,42 +93,13 @@ app
   })
   .RequireAuthorization(ClientCredentialsAuthentication.SchemeName);
 
-app.MapPost("/json-files", async ([FromBody] FilesRequest request) => 
-{
-  await SaveFiles(request.Attachments);
-  await SaveFiles(request.Images);
-
-  return new SuccessResponse("Files received!");
-});
-
-app.MapPost("/date-body", ([FromBody] DateRequest request) => new { value = request.DateValue });
-
-app.MapGet("/date", ([FromQuery] string date) => new { value = date });
-
-app.MapPost("/list-value", ([FromBody] ListRequest request) => new { value = request.Value });
-
-app.MapGet("/list/{value}", ([FromRoute] string value) => new { value });
-
-app.MapGet("/simple-array", () => new[] { "one", "two", "three" } );
-
-app.MapGet("/complex-object", () => new { value = new { name = "John", age = 30, hobbies = new[] { "reading", "swimming" } } });
-
-app.MapGet("/complex-array", () => new[] { new { name = "John", age = 30 }, new { name = "Jane", age = 25 } });
-
-app.MapGet("/users", () => new { value = "1" });
-
-// Type A, 5bba9955-424e-49f9-ac36-d51b0417e71f
-// Type B, 8ecbcf0b-3fa3-4cde-80f2-c2986d9aad4c
-app.MapGet("/categories", () => new { value = "5bba9955-424e-49f9-ac36-d51b0417e71f" });
-
-var record = new { 
-  textField = "Text field value", 
-  numberField = 123, 
-  dateField = DateTime.UtcNow.ToString("yyyy-MM-ddTHH:mm:ssZ", CultureInfo.InvariantCulture),
-  timespanField = "1 Second(s)"
-};
-
-app.MapGet("/data", () => record);
+app
+  .MapGet("/oauth2", (HttpContext context) => 
+  {
+    var user = context.User.Identity?.Name;
+    return new SuccessResponse($"Hello, {user}!");
+  })
+  .RequireAuthorization(JwtBearerDefaults.AuthenticationScheme);
 
 app.MapGet("/timeout", async () => 
 {
@@ -179,81 +107,117 @@ app.MapGet("/timeout", async () =>
   return new SuccessResponse("Timeout completed!");
 });
 
-var retryCount = 0;
-
-app.MapGet("/retry", () => 
-{
-  if (retryCount < 4)
-  {
-    retryCount++;
-    return Results.Problem("Retry failed!", statusCode: StatusCodes.Status404NotFound);
-  }
-
-  return Results.Ok(new SuccessResponse("Finally!"));
-});
-
-app.Run();
-
-static async Task SaveFiles(string filesString)
-{
-  var files = filesString.Split(',');
-  
-  foreach (var file in files)
-  {
-    var fileBytes = Convert.FromBase64String(file);
-    var fileName = Path.GetRandomFileName();
-    var fileDirectory = Path.Combine(Directory.GetCurrentDirectory(), "files");
-    var filePath = Path.Combine(fileDirectory, fileName);
-
-    if (Directory.Exists(fileDirectory) is false)
+app
+  .MapGet("/retry/{id}", (string id, [FromServices] RetryTracker tracker) => 
+  {  
+    if (tracker.Counts.TryGetValue(id, out var retryCount) is false)
     {
-      Directory.CreateDirectory(fileDirectory);
+      tracker.Counts[id] = 0;
+      retryCount = 0;
+    }
+    
+
+    if (retryCount < 2)
+    {
+      tracker.Counts[id] = retryCount + 1;
+      return Results.Problem("Retry failed!", statusCode: StatusCodes.Status503ServiceUnavailable);
     }
 
-    await File.WriteAllBytesAsync(filePath, fileBytes);
+    tracker.Counts.Remove(id);
 
-    Console.WriteLine($"File saved: {fileName}");
-  }
-}
+    return Results.Ok(new SuccessResponse("Finally!"));
+  })
+  .RequireAuthorization(CombinedAuthentication.SchemeName);
 
-static (int ExpiresInSecs, string Value) GenerateJwtToken(string username)
-{
-  var tokenHandler = new JwtSecurityTokenHandler();
-  var key = Encoding.ASCII.GetBytes(jwtSecret);
-  var tokenDescriptor = new SecurityTokenDescriptor
+app
+  .MapGet("/users", () => 
   {
-    Subject = new ClaimsIdentity([
-      new Claim(ClaimTypes.NameIdentifier, username),
-      new Claim(ClaimTypes.Name, username),
-    ]),
-    Expires = DateTime.UtcNow.AddDays(1),
-    SigningCredentials = new SigningCredentials(
-      new SymmetricSecurityKey(key), 
-      SecurityAlgorithms.HmacSha256Signature
-    ),
-    Audience = jwtAudience,
-    Issuer = jwtIssuer,
-  };
+    var users = User.Generate(10);
+    return Results.Ok(users);
+  })
+  .RequireAuthorization(CombinedAuthentication.SchemeName);
 
-  var token = tokenHandler.CreateToken(tokenDescriptor);
-  return ((int)tokenDescriptor.Expires!.Value.Subtract(DateTime.UtcNow).TotalSeconds, tokenHandler.WriteToken(token));
-}
+app
+  .MapGet("/users/{id}", (string id) => 
+  {
+    var user = User.Generate();
+    user.Id = id;
+    return Results.Ok(user);
+  })
+  .RequireAuthorization(CombinedAuthentication.SchemeName);
+
+app
+  .MapGet("/policies", () => 
+  {
+    var policies = Policy.Generate(10);
+    return Results.Ok(policies);
+  })
+  .RequireAuthorization(CombinedAuthentication.SchemeName);
+
+app
+  .MapGet("/policies/{id}", (string id) => 
+  {
+    var policy = Policy.Generate();
+    policy.Id = id;
+    return Results.Ok(policy);
+  })
+  .RequireAuthorization(CombinedAuthentication.SchemeName);
+
+app
+  .MapGet("/risks", () => 
+  {
+    var risks = Risk.Generate(10);
+    return Results.Ok(risks);
+  })
+  .RequireAuthorization(CombinedAuthentication.SchemeName);
+
+app
+  .MapGet("/risks/{id}", (string id) => 
+  {
+    var risk = Risk.Generate();
+    risk.Id = id;
+    return Results.Ok(risk);
+})
+.RequireAuthorization(CombinedAuthentication.SchemeName);
+
+app
+  .MapGet("/incidents", () => 
+  {
+    var incidents = Incident.Generate(10);
+    return Results.Ok(incidents);
+  })
+  .RequireAuthorization(CombinedAuthentication.SchemeName);
+
+app
+  .MapGet("/incidents/{id}", (string id) => 
+  {
+    var incident = Incident.Generate();
+    incident.Id = id;
+    return Results.Ok(incident);
+  })
+  .RequireAuthorization(CombinedAuthentication.SchemeName);
+
+app
+  .MapGet("/controls", () => 
+  {
+    var controls = Control.Generate(10);
+    return Results.Ok(controls);
+  })
+  .RequireAuthorization(CombinedAuthentication.SchemeName);
+
+app
+  .MapGet("/controls/{id}", (string id) => 
+  {
+    var control = Control.Generate();
+    control.Id = id;
+    return Results.Ok(control);
+  })
+  .RequireAuthorization(CombinedAuthentication.SchemeName);
+
+app.Run();
 
 /// <summary>
 /// Partial class declaration for the Program class.
 /// Allows using the Program class in integration tests.
 /// </summary>
 public partial class Program { }
-
-record SuccessResponse(string Message);
-
-record LoginRequest(string Username, string Password)
-{
-  public bool IsValid => string.IsNullOrWhiteSpace(Username) is false && string.IsNullOrWhiteSpace(Password) is false;
-}
-
-record DateRequest(string DateValue);
-
-record ListRequest(string Value);
-
-record FilesRequest(string Attachments, string Images);

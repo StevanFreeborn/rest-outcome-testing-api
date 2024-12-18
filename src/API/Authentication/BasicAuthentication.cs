@@ -6,7 +6,7 @@ class BasicAuthentication(
   UrlEncoder encoder
 ) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
-  public const string SchemeName = "BasicAuthentication";
+  public const string SchemeName = "Basic";
   
   protected override Task<AuthenticateResult> HandleAuthenticateAsync()
   {
