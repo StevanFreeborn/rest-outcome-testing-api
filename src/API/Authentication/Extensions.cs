@@ -90,7 +90,7 @@ public static class Extensions
       .RequireAuthorization(BasicAuthentication.SchemeName)
       .WithName("Basic")
       .WithSummary("Basic Authentication")
-      .WithDescription("Simulates an endpoint that requires basic authentication.")
+      .WithDescription("Simulates an endpoint that requires basic authentication. Use 'admin' as username and 'password' as password.")
       .Produces<SuccessResponse>((int)HttpStatusCode.OK)
       .Produces<ProblemDetails>((int)HttpStatusCode.Unauthorized);
 
@@ -103,7 +103,7 @@ public static class Extensions
       .RequireAuthorization(ApiKeyAuthentication.SchemeName)
       .WithName("ApiKey")
       .WithSummary("API Key Authentication")
-      .WithDescription("Simulates an endpoint that requires API key authentication.")
+      .WithDescription("Simulates an endpoint that requires API key authentication. Use 'api-key' as the API key.")
       .Produces<SuccessResponse>((int)HttpStatusCode.OK)
       .Produces<ProblemDetails>((int)HttpStatusCode.Unauthorized);
 
@@ -116,7 +116,7 @@ public static class Extensions
       .RequireAuthorization(JwtBearerDefaults.AuthenticationScheme)
       .WithName("Bearer")
       .WithSummary("Bearer Authentication")
-      .WithDescription("Simulates an endpoint that requires bearer token authentication.")
+      .WithDescription("Simulates an endpoint that requires bearer token authentication. Use the token generated from the 'Generate Token' endpoint.")
       .Produces<SuccessResponse>((int)HttpStatusCode.OK)
       .Produces<ProblemDetails>((int)HttpStatusCode.Unauthorized);
 
@@ -144,7 +144,7 @@ public static class Extensions
       })
       .WithName("GenerateToken")
       .WithSummary("Generate Token")
-      .WithDescription("Generates a JWT token using the provided username and password.")
+      .WithDescription("Generates a JWT token using the provided username and password. Use 'admin' as username and 'password' as password.")
       .Produces<LoginResponse>((int)HttpStatusCode.OK)
       .Produces<ValidationProblemDetails>((int)HttpStatusCode.BadRequest)
       .Produces<ProblemDetails>((int)HttpStatusCode.Unauthorized);
@@ -159,7 +159,7 @@ public static class Extensions
       .RequireAuthorization(ClientCredentialsAuthentication.SchemeName)
       .WithName("AccessToken")
       .WithSummary("Access Token")
-      .WithDescription("Generates an access token using the client credentials flow.")
+      .WithDescription("Generates an access token using the client credentials flow. Use 'client' as the client ID and 'secret' as the client secret.")
       .Produces<LoginResponse>((int)HttpStatusCode.OK)
       .Produces<ProblemDetails>((int)HttpStatusCode.Unauthorized);
 
@@ -172,7 +172,7 @@ public static class Extensions
       .RequireAuthorization(JwtBearerDefaults.AuthenticationScheme)
       .WithName("OAuth2")
       .WithSummary("OAuth2 Protected")
-      .WithDescription("Simulates an OAuth2 protected endpoint.")
+      .WithDescription("Simulates an OAuth2 protected endpoint. Use the token generated from the 'Access Token' endpoint.")
       .Produces<SuccessResponse>((int)HttpStatusCode.OK)
       .Produces<ProblemDetails>((int)HttpStatusCode.Unauthorized);
 
