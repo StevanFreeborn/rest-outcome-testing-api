@@ -53,4 +53,4 @@ jobs:
             docker stop restapiplayground.stevanfreeborn.com
             docker rm restapiplayground.stevanfreeborn.com
             docker pull ${{ secrets.DOCKERHUB_USERNAME }}/restapiplayground.stevanfreeborn.com:${{ needs.build.outputs.version }}
-            docker run -d -p 7777:80 --name restapiplayground.stevanfreeborn.com ${{ secrets.DOCKERHUB_USERNAME }}/restapiplayground.stevanfreeborn.com:${{ needs.build.outputs.version }}
+            docker run -d -p 7777:8080 --name restapiplayground.stevanfreeborn.com ${{ secrets.DOCKERHUB_USERNAME }}/restapiplayground.stevanfreeborn.com:${{ needs.build.outputs.version }}
