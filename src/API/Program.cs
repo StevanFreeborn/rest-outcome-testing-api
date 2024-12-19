@@ -39,6 +39,8 @@ app.UseStatusCodePages();
 app.UseAuthentication();
 app.UseAuthorization();
 
+app.MapStaticAssets();
+
 app.MapOpenApi();
 app.MapScalarApiReference(o =>
 {
@@ -46,6 +48,7 @@ app.MapScalarApiReference(o =>
   o.WithDefaultHttpClient(ScalarTarget.JavaScript, ScalarClient.Fetch);
   o.WithTheme(ScalarTheme.Purple);
   o.WithClientButton(false);
+  o.WithFavicon("/favicon.ico");
 });
 
 app.MapGet("/", () => Results.Redirect("/scalar/v1")).ExcludeFromDescription();
