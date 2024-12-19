@@ -1,13 +1,27 @@
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+
 using Bogus;
 
 namespace API.FakeData;
 
-class Risk
+record Risk
 {
-  public string Id { get; set; } = string.Empty;
-  public string Title { get; set; } = string.Empty;
-  public string Severity { get; set; } = string.Empty;
-  public string Impact { get; set; } = string.Empty;
+  [Description("The unique identifier of the risk")]
+  [Required]
+  public string Id { get; init; } = string.Empty;
+
+  [Description("The title of the risk")]
+  [Required]
+  public string Title { get; init; } = string.Empty;
+
+  [Description("The severity of the risk")]
+  [Required]
+  public string Severity { get; init; } = string.Empty;
+
+  [Description("The impact of the risk")]
+  [Required]
+  public string Impact { get; init; } = string.Empty;
 
   private static readonly Faker<Risk> Faker = new Faker<Risk>()
     .RuleFor(r => r.Id, f => f.Random.Guid().ToString())

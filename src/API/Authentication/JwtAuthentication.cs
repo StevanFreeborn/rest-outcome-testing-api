@@ -22,7 +22,7 @@ class JwtAuthenticator
       ]),
       Expires = DateTime.UtcNow.AddDays(1),
       SigningCredentials = new SigningCredentials(
-        new SymmetricSecurityKey(key), 
+        new SymmetricSecurityKey(key),
         SecurityAlgorithms.HmacSha256Signature
       ),
       Audience = Audience,

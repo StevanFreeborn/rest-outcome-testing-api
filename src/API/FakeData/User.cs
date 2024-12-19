@@ -1,14 +1,31 @@
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+
 using Bogus;
 
 namespace API.FakeData;
 
-class User
+record User
 {
-  public string Id { get; set; } = string.Empty;
-  public string FirstName { get; set; } = string.Empty;
-  public string LastName { get; set; } = string.Empty;
-  public string Email { get; set; } = string.Empty;
-  public string Status { get; set; } = string.Empty;
+  [Description("The unique identifier of the user")]
+  [Required]
+  public string Id { get; init; } = string.Empty;
+
+  [Description("The first name of the user")]
+  [Required]
+  public string FirstName { get; init; } = string.Empty;
+
+  [Description("The last name of the user")]
+  [Required]
+  public string LastName { get; init; } = string.Empty;
+
+  [Description("The email address of the user")]
+  [Required]
+  public string Email { get; init; } = string.Empty;
+
+  [Description("The status of the user")]
+  [Required]
+  public string Status { get; init; } = string.Empty;
 
   private static readonly Faker<User> Faker = new Faker<User>()
     .RuleFor(u => u.Id, f => f.Random.Guid().ToString())

@@ -1,14 +1,31 @@
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+
 using Bogus;
 
 namespace API.FakeData;
 
-class Policy
+record Policy
 {
-  public string Id { get; set; } = string.Empty;
-  public string Name { get; set; } = string.Empty;
-  public string Description { get; set; } = string.Empty;
-  public string Status { get; set; } = string.Empty;
-  public DateTime PublishedAt { get; set; } = DateTime.UtcNow;
+  [Description("The unique identifier of the policy")]
+  [Required]
+  public string Id { get; init; } = string.Empty;
+
+  [Description("The name of the policy")]
+  [Required]
+  public string Name { get; init; } = string.Empty;
+
+  [Description("The description of the policy")]
+  [Required]
+  public string Description { get; init; } = string.Empty;
+
+  [Description("The status of the policy")]
+  [Required]
+  public string Status { get; init; } = string.Empty;
+
+  [Description("The date and time the policy was published")]
+  [Required]
+  public DateTime PublishedAt { get; init; } = DateTime.UtcNow;
 
   private static readonly Faker<Policy> Faker = new Faker<Policy>()
     .RuleFor(p => p.Id, f => f.Random.Guid().ToString())

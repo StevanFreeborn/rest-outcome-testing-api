@@ -4,7 +4,7 @@ using Microsoft.OpenApi.Models;
 
 namespace API.OpenAPI;
 
-class AuthTransformer(IAuthenticationSchemeProvider authenticationSchemeProvider) : IOpenApiDocumentTransformer
+class AuthDocumentTransformer(IAuthenticationSchemeProvider authenticationSchemeProvider) : IOpenApiDocumentTransformer
 {
   public async Task TransformAsync(OpenApiDocument document, OpenApiDocumentTransformerContext context, CancellationToken cancellationToken)
   {
@@ -12,28 +12,20 @@ class AuthTransformer(IAuthenticationSchemeProvider authenticationSchemeProvider
 
     var authenticationSchemes = await authenticationSchemeProvider.GetAllSchemesAsync();
 
-    if (authenticationSchemes.Any(authScheme => authScheme.Name == JwtBearerDefaults.AuthenticationScheme))
+    if (authenticationSchemes.Any(authScheme => authScheme.Name is JwtBearerDefaults.AuthenticationScheme))
     {
       var requirement = new OpenApiSecurityScheme()
       {
         Type = SecuritySchemeType.Http,
         Scheme = JwtBearerDefaults.AuthenticationScheme,
         In = ParameterLocation.Header,
-        BearerFormat = "Json Web Token"
+        BearerFormat = "Json Web Token",
       };
 
       document.Components.SecuritySchemes.Add(JwtBearerDefaults.AuthenticationScheme, requirement);
-
-      // foreach (var operation in document.Paths.Values.SelectMany(path => path.Operations))
-      // {
-      //   operation.Value.Security.Add(new OpenApiSecurityRequirement
-      //   {
-      //     [new OpenApiSecurityScheme { Reference = new OpenApiReference { Id = "Bearer", Type = ReferenceType.SecurityScheme } }] = Array.Empty<string>()
-      //   });
-      // }
     }
 
-    if (authenticationSchemes.Any(authScheme => authScheme.Name == BasicAuthentication.SchemeName))
+    if (authenticationSchemes.Any(authScheme => authScheme.Name is BasicAuthentication.SchemeName))
     {
       var requirement = new OpenApiSecurityScheme()
       {
@@ -45,7 +37,7 @@ class AuthTransformer(IAuthenticationSchemeProvider authenticationSchemeProvider
       document.Components.SecuritySchemes.Add(BasicAuthentication.SchemeName, requirement);
     }
 
-    if (authenticationSchemes.Any(authScheme => authScheme.Name == ApiKeyAuthentication.SchemeName))
+    if (authenticationSchemes.Any(authScheme => authScheme.Name is ApiKeyAuthentication.SchemeName))
     {
       var requirement = new OpenApiSecurityScheme()
       {
@@ -58,7 +50,7 @@ class AuthTransformer(IAuthenticationSchemeProvider authenticationSchemeProvider
       document.Components.SecuritySchemes.Add(ApiKeyAuthentication.SchemeName, requirement);
     }
 
-    if (authenticationSchemes.Any(authScheme => authScheme.Name == ClientCredentialsAuthentication.SchemeName))
+    if (authenticationSchemes.Any(authScheme => authScheme.Name is ClientCredentialsAuthentication.SchemeName))
     {
       var requirement = new OpenApiSecurityScheme()
       {

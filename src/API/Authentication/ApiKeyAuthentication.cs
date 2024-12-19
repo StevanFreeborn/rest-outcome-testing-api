@@ -1,8 +1,8 @@
 namespace API.Authentication;
 
 class ApiKeyAuthentication(
-  IOptionsMonitor<AuthenticationSchemeOptions> options, 
-  ILoggerFactory logger, 
+  IOptionsMonitor<AuthenticationSchemeOptions> options,
+  ILoggerFactory logger,
   UrlEncoder encoder
 ) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {

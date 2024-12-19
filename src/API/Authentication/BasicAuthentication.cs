@@ -7,7 +7,7 @@ class BasicAuthentication(
 ) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
   public const string SchemeName = "Basic";
-  
+
   protected override Task<AuthenticateResult> HandleAuthenticateAsync()
   {
     var authHeader = Request.Headers.Authorization.FirstOrDefault();

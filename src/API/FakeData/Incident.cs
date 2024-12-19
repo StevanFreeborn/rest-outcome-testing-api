@@ -1,13 +1,27 @@
+using System.ComponentModel;
+using System.ComponentModel.DataAnnotations;
+
 using Bogus;
 
 namespace API.FakeData;
 
-class Incident
+record Incident
 {
-  public string Id { get; set; } = string.Empty;
-  public string Title { get; set; } = string.Empty;
-  public string Status { get; set; } = string.Empty;
-  public string Priority { get; set; } = string.Empty;
+  [Description("The unique identifier of the incident")]
+  [Required]
+  public string Id { get; init; } = string.Empty;
+
+  [Description("The title of the incident")]
+  [Required]
+  public string Title { get; init; } = string.Empty;
+
+  [Description("The status of the incident")]
+  [Required]
+  public string Status { get; init; } = string.Empty;
+
+  [Description("The priority of the incident")]
+  [Required]
+  public string Priority { get; init; } = string.Empty;
 
   private static readonly Faker<Incident> Faker = new Faker<Incident>()
     .RuleFor(i => i.Id, f => f.Random.Guid().ToString())
