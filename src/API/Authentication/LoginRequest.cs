@@ -4,7 +4,7 @@ namespace API.Authentication;
 
 record LoginRequest(
   [property: Description("The username of the user")]
-  string Username, 
+  string Username,
   [property: Description("The password of the user")]
   string Password
 )
