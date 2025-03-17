@@ -11,7 +11,7 @@ static class Extensions
     group
       .MapGet("/timeout", async () =>
       {
-        await Task.Delay(11000);
+        await Task.Delay(31000);
         return Results.Ok(new SuccessResponse("Timeout completed!"));
       })
       .RequireAuthorization(CombinedAuthentication.SchemeName)
