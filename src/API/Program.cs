@@ -175,7 +175,7 @@ app.MapGet("/data", () => record);
 
 app.MapGet("/timeout", async () => 
 {
-  await Task.Delay(11000);
+  await Task.Delay(31000);
   return new SuccessResponse("Timeout completed!");
 });
 
@@ -183,13 +183,30 @@ var retryCount = 0;
 
 app.MapGet("/retry", () => 
 {
-  if (retryCount < 4)
+  if (retryCount < 10)
   {
     retryCount++;
-    return Results.Problem("Retry failed!", statusCode: StatusCodes.Status404NotFound);
+    return Results.Problem("Retry failed!", statusCode: StatusCodes.Status500InternalServerError);
   }
 
   return Results.Ok(new SuccessResponse("Finally!"));
+});
+
+app.MapGet("/error", () => 
+{
+  var randomNum = Random.Shared.Next(1, 5);
+
+  if (randomNum is 1)
+  {
+    return Results.BadRequest("Bad request error!");
+  }
+
+  if (randomNum is 2)
+  {
+    return Results.NotFound("Not found error!");
+  }
+
+  return Results.Problem("Internal server error!", statusCode: StatusCodes.Status500InternalServerError);
 });
 
 app.Run();
