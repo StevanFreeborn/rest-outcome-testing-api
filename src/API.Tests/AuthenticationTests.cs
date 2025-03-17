@@ -1,17 +1,9 @@
-using System.Net.Http.Headers;
 using System.Text.Json.Nodes;
 
 namespace API.Tests;
 
 public class AuthenticationTests(AppFactory appFactory) : IntegrationTest(appFactory)
 {
-  private AuthenticationHeaderValue CreateBasicAuthHeader(string username, string password)
-  {
-    var credentials = $"{username}:{password}";
-    var encodedCredentials = Convert.ToBase64String(Encoding.UTF8.GetBytes(credentials));
-    return new("Basic", encodedCredentials);
-  }
-
   [Fact]
   public async Task NoAuthEndpoint_WhenCalled_ItShouldReturnOk()
   {
@@ -144,7 +136,7 @@ public class AuthenticationTests(AppFactory appFactory) : IntegrationTest(appFac
   [Fact]
   public async Task GenerateTokenEndpoint_WhenCalledWithValidLogin_ItShouldReturnOk()
   {
-    var response = await _client.PostAsJsonAsync("/generate-token", new { username = "admin", password = "admin" });
+    var response = await _client.PostAsJsonAsync("/generate-token", new { username = "admin", password = "password" });
 
     response.StatusCode.Should().Be(HttpStatusCode.OK);
 
@@ -173,7 +165,7 @@ public class AuthenticationTests(AppFactory appFactory) : IntegrationTest(appFac
   [Fact]
   public async Task BearerAuthEndpoint_WhenCalledWithValidToken_ItShouldReturnOk()
   {
-    var tokenResponse = await _client.PostAsJsonAsync("/generate-token", new { username = "admin", password = "admin" });
+    var tokenResponse = await _client.PostAsJsonAsync("/generate-token", new { username = "admin", password = "password" });
     var tokenBody = await tokenResponse.Content.ReadFromJsonAsync<JsonObject>();
     var token = tokenBody!["token"]!.ToString();
 

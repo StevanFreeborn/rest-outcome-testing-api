@@ -3,12 +3,12 @@
 namespace API.Authentication;
 
 public class ClientCredentialsAuthentication(
-  IOptionsMonitor<AuthenticationSchemeOptions> options, 
-  ILoggerFactory logger, 
+  IOptionsMonitor<AuthenticationSchemeOptions> options,
+  ILoggerFactory logger,
   UrlEncoder encoder
 ) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
-  public const string SchemeName = "ClientCredentialsAuthentication";
+  public const string SchemeName = "Client Credentials";
 
   protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
   {
